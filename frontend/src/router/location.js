@@ -1,4 +1,4 @@
-const pages = new Set(['versions', 'pairs', 'runs', 'result', 'review']);
+const pages = new Set(['versions', 'pairs', 'monitor', 'runs', 'result', 'review']);
 
 export function locationPage() {
   const [key, id] = location.hash.slice(1).split('/');

@@ -8,8 +8,10 @@ from src.constants.enums import Role
 from src.controllers.auth import current_user, login, require_role
 from src.controllers.studies import study_detail
 from src.models.database import connect
-from src.schemas.inputs import Credentials, PairInput, ReviewInput, RunInput, StudyInput, VersionInput
+from src.schemas.inputs import (Credentials, MonitorPlanInput, PairInput, ReviewInput, RunInput, StudyInput,
+                                VersionInput)
 from src.services.exports import pairing_csv
+from src.services.monitoring import evaluate_look, lock_plan, monitor_state, save_plan
 from src.services.records import add_study, add_version, save_pair
 from src.services.runs import detail, enqueue, export_data, review
 
@@ -64,6 +66,32 @@ def put_pair(study_id: int, visitor_code: Annotated[str, Path(pattern=r'^[A-Z0-9
 def run(study_id: int, data: RunInput, user=Depends(analyst)):
     with connect() as db:
         return enqueue(db, study_id, data.confidence, user['username'])
+
+
+@api.get('/studies/{study_id}/monitor')
+def monitoring(study_id: int, user=Depends(current_user)):
+    with connect() as db:
+        return monitor_state(db, study_id)
+
+
+@api.put('/studies/{study_id}/monitor/plan')
+def put_monitor_plan(study_id: int, data: MonitorPlanInput, user=Depends(analyst)):
+    with connect() as db:
+        return save_plan(db, study_id, data.test_quota, data.alpha_one_sided, data.cumulative_ns,
+                         user['username'])
+
+
+@api.post('/studies/{study_id}/monitor/lock')
+def lock_monitor_plan(study_id: int, user=Depends(analyst)):
+    with connect() as db:
+        return lock_plan(db, study_id, user['username'])
+
+
+@api.post('/studies/{study_id}/monitor/looks/{look_id}/evaluate')
+def evaluate_monitor_look(study_id: int, look_id: int, user=Depends(analyst)):
+    with connect() as db:
+        evaluate_look(db, study_id, look_id, user['username'])
+        return monitor_state(db, study_id)
 
 
 @api.get('/runs/{run_id}')

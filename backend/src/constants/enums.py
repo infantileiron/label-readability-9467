@@ -24,4 +24,6 @@ class Decision(StrEnum):
 
 
 METHOD = 'paired-exact-v1'
+MONITOR_METHOD = 'paired-exact-alpha-spend-v1'
 PAIR_LIMIT = 1000
+LOOK_LIMIT = 20

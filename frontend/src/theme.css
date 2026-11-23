@@ -239,3 +239,17 @@ dialog::backdrop { background: oklch(27% .039 55 / .48); }
   .study-banner { align-items: flex-start; flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+
+/* Sequential monitoring */
+.monitor-reason { display: flex; gap: 10px; align-items: baseline; background: var(--amber-pale); color: var(--amber); padding: 9px 14px; margin: -4px 0 16px; border-radius: 3px; line-height: 1.6; }
+.monitor-reason b { flex: 0 0 auto; color: var(--wine); font-size: 12px; letter-spacing: .08em; }
+.monitor-strip > div:first-child b { font-family: var(--serif); letter-spacing: 0; font-size: clamp(19px, 2vw, 27px); }
+.monitor-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 13px; }
+.monitor-plan.locked .facts { margin-bottom: 6px; }
+.monitor-looks, .monitor-evidence { margin-bottom: 13px; }
+.evidence-scroll { max-height: 275px; }
+.monitor-looks td small, .monitor-evidence td small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.p-value { color: var(--muted); font-family: var(--mono); }
+.cohort-codes { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.monitor-evidence tr.voided td { color: var(--muted); background: var(--paper); text-decoration-line: line-through; text-decoration-color: var(--line); }
+.monitor-evidence tr.voided td .chip { text-decoration: none; }

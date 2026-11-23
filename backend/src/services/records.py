@@ -56,11 +56,23 @@ def save_pair(db, study_id, visitor_code, data, actor, expected_revision):
         count = db.execute('SELECT count(*) AS n FROM reading_pairs WHERE study_id = %s', (study_id,)).fetchone()
         if count['n'] >= PAIR_LIMIT:
             raise HTTPException(409, f'每批最多登记 {PAIR_LIMIT} 对')
-    db.execute('''INSERT INTO reading_pairs(study_id, visitor_code, reading_order, old_ok, new_ok)
-                  VALUES (%(study_id)s, %(visitor_code)s, %(reading_order)s, %(old_ok)s, %(new_ok)s)
+    db.execute('''INSERT INTO reading_pairs(study_id, visitor_code, reading_order, old_ok, new_ok, enrollment_seq)
+                  SELECT %(study_id)s, %(visitor_code)s, %(reading_order)s, %(old_ok)s, %(new_ok)s,
+                         coalesce((SELECT max(enrollment_seq) FROM reading_pairs WHERE study_id=%(study_id)s), 0) + 1
                   ON CONFLICT (study_id, visitor_code) DO UPDATE SET
                     reading_order=excluded.reading_order, old_ok=excluded.old_ok,
                     new_ok=excluded.new_ok, updated_at=now()''', {'study_id': study_id, **row})
+    if existing is not None:
+        # A correction to a visitor already used in a look cohort voids every
+        # standing conclusion that used them; recomputing costs a fresh quota unit.
+        voided = db.execute('''UPDATE look_evaluations
+                               SET invalidated_at=now(), invalidated_reason=%s, invalidated_by=%s
+                               WHERE study_id=%s AND invalidated_at IS NULL AND %s = ANY(cohort_codes)
+                               RETURNING id, ordinal''',
+                            ('已用样本更正', actor, study_id, visitor_code)).fetchall()
+        for item in voided:
+            record(db, actor, 'monitor.evaluation.invalidated', str(item['id']),
+                   {'reason': '已用样本更正', 'ordinal': item['ordinal'], 'visitor_code': visitor_code})
     revision = db.execute('UPDATE studies SET revision=revision+1 WHERE id=%s RETURNING revision',
                           (study_id,)).fetchone()['revision']
     record(db, actor, 'pair.saved', f'{study["code"]}/{visitor_code}',

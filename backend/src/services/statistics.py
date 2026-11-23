@@ -1,4 +1,5 @@
-from math import comb, exp, fsum, lgamma, log, log1p
+from math import comb, exp, fsum, lgamma, log, log1p, sqrt
+from statistics import NormalDist
 
 
 def exact_mcnemar(old_only, new_only):
@@ -72,3 +73,33 @@ def analyze(pairs, confidence):
         'reading_orders': {order: summarize([row for row in pairs if row['reading_order'] == order])
                            for order in ('old_first', 'new_first')},
     }
+
+
+def _phi(z):
+    return NormalDist().cdf(z)
+
+
+def _phi_inv(p):
+    return NormalDist().inv_cdf(p)
+
+
+def one_sided_exact(new_only, discordant):
+    """Exact one-sided McNemar p-value for H1: P(new wins | discordant) > 0.5."""
+    if not discordant:
+        return None
+    tail = sum(comb(discordant, i) for i in range(new_only, discordant + 1))
+    return tail / (1 << discordant)
+
+
+def obf_spend(alpha, info, total_info):
+    """Cumulative one-sided alpha spent by an O'Brien–Fleming schedule.
+
+    alpha*(t) = 1 - Phi(z_alpha / sqrt(t)) with t the information fraction.
+    It rises from 0 to alpha as t goes from 0 to 1, so successive increments are
+    positive and sum to the batch alpha.
+    """
+    if total_info <= 0 or info <= 0:
+        return 0.0
+    fraction = min(info / total_info, 1.0)
+    z = _phi_inv(1 - alpha)
+    return 1 - _phi(z / sqrt(fraction))

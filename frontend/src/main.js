@@ -2,6 +2,7 @@ import { onExpired, request, sessionKey } from './api/client.js';
 import { empty, layout } from './components/common/ui.js';
 import { pollWhile } from './hooks/poll.js';
 import { loginPage } from './pages/login.js';
+import { monitorPage } from './pages/monitor.js';
 import { pairForm, pairsPage } from './pages/pairs.js';
 import { reviewPage } from './pages/review.js';
 import { resultPage, runsPage } from './pages/runs.js';
@@ -23,7 +24,7 @@ async function render() {
     return;
   }
   const { page, id } = locationPage();
-  const simple = { versions: versionsPage, pairs: pairsPage, runs: runsPage };
+  const simple = { versions: versionsPage, pairs: pairsPage, monitor: monitorPage, runs: runsPage };
   try {
     if (simple[page]) {
       root.innerHTML = layout(page, simple[page]());
@@ -110,6 +111,16 @@ const actions = {
     await selectStudy(store.studyId);
     go('result', run.id);
   },
+  'monitor-plan': async ({ test_quota, alpha_one_sided, cumulative_ns }) => {
+    const ns = String(cumulative_ns).split(/[\s,，]+/).filter(Boolean).map(Number);
+    await request(`/studies/${store.studyId}/monitor/plan`, {
+      method: 'PUT',
+      data: { test_quota: Number(test_quota), alpha_one_sided: Number(alpha_one_sided), cumulative_ns: ns },
+    });
+    await selectStudy(store.studyId);
+    await render();
+    notify('监看计划已保存');
+  },
 };
 
 function logout() {
@@ -143,7 +154,7 @@ root.addEventListener('submit', event => {
 root.addEventListener('click', async event => {
   const button = event.target.closest('button');
   if (!button) return;
-  const { demo, edit, close, code, filter, download, run } = button.dataset;
+  const { demo, edit, close, code, filter, download, run, evaluate, lockPlan } = button.dataset;
   if (demo) {
     const form = document.querySelector('#login-form');
     form.elements.username.value = demo;
@@ -160,6 +171,30 @@ root.addEventListener('click', async event => {
   } else if (filter) {
     store.pairFilter = filter;
     render();
+  } else if (evaluate !== undefined) {
+    button.disabled = true;
+    try {
+      await post(`/studies/${store.studyId}/monitor/looks/${evaluate}/evaluate`, undefined);
+      await selectStudy(store.studyId);
+      await render();
+      notify('已评估该看点');
+    } catch (error) {
+      notify(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  } else if (lockPlan !== undefined) {
+    button.disabled = true;
+    try {
+      await post(`/studies/${store.studyId}/monitor/lock`, undefined);
+      await selectStudy(store.studyId);
+      await render();
+      notify('监看计划已锁定');
+    } catch (error) {
+      notify(error.message);
+    } finally {
+      button.disabled = false;
+    }
   } else if (download) {
     button.disabled = true;
     const file = download === 'csv' ? 'pairs.csv' : 'export.json';

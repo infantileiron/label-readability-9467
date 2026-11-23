@@ -51,6 +51,12 @@ class RunInput(Input):
     confidence: Literal[90, 95, 99]
 
 
+class MonitorPlanInput(Input):
+    test_quota: int = Field(ge=1, le=50)
+    alpha_one_sided: float = Field(gt=0, lt=1)
+    cumulative_ns: Annotated[list[int], Field(min_length=1, max_length=20)]
+
+
 class ReviewInput(Input):
     decision: Decision
     note: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=500)]
